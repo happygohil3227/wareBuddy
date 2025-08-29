@@ -1,0 +1,84 @@
+---
+## Model Formulation
+
+### Sets and Indices
+$i, j \in \text{Farms} = \{0,1,2, ..,20 \}$: Indices and set of farms. The depot index number is 0.
+
+$\text{everyDay} = \{0,1,2, ..,9 \} \subset \text{Farms}$: Farms that need to visit every day.
+
+$\text{otherDay} = \{10,11, 12, ..,20 \} \subset \text{Farms}$: Farms that need to visit every other day.
+
+$k \in K = \{1,2 \} $: Day type for farms that are visited every other day.
+
+$\text{Edges}= \{(i,j) \in Farms \times Farms \}$: Set of allowed Edges
+
+$S_k \in S  $: Subtour in route of day $k$.
+
+$G = (\text{Farms} , \text{Edges})$: A graph where the set $\text{Farms}$ defines the set of nodes and the set $\text{Edges}$ defines the set of edges. 
+
+### Parameters 
+
+$d_{i, j} \in \mathbb{R}^+$: Distance from farm $i$ to farm $j$, for all $(i, j) \in \text{Edges}$. 
+
+Notice that the distance from farm $i$ to farm $j$ is the same as the distance from farm $j$ to farm $i$, i.e. $d_{i, j} = d_{j, i}$.
+
+$C \in \mathbb{R}^+$: The capacity of the tanker lorry.
+
+$R_i \in \mathbb{R}^+$: Milk collection requirements of farm $i$.
+
+### Decision Variables
+$x_{i, j, k} \in \{0, 1\}$: This variable is equal to 1, if the tour on day $k$ connects directly farm $i$ with farm $j$. Otherwise, the decision variable is equal to zero.
+
+$y_{i, k} \in \{0, 1\}$: This variable is equal to 1, if farm $i \in otherDay$ is visited on the tour of day $k \in K$. 
+
+### Objective Function
+- **Shortest Route**. Minimize the total distance of both routes. 
+
+\begin{equation}
+\text{Min} \quad Z = \sum_{k \in K} \sum_{(i,j) \in \text{Edges}} \frac{1}{2} d_{i,j} \cdot x_{i,j,k}
+\tag{0}
+\end{equation}
+
+### Constraints 
+- **Symmetry Constraints**. For each edge $(i,j)$, ensure that the farm $i$ and $j$ are connected, if the former is visited immediately before or after visiting the latter.
+
+\begin{equation}
+x_{i, j, k} = x_{j, i, k} \quad \forall k \in dayType, \; (i, j) \in Edges
+\tag{1}
+\end{equation}
+
+- **Entering and leaving an every day farm**. For each farm $i$, ensure that this farm is connected to two other farms. 
+
+\begin{equation}
+\sum_{j: (i,j) \in \text{Edges}} x_{i,j,k} = 2 \quad \forall  i \in everyDay, \; k \in dayType 
+\tag{2}
+\end{equation}
+
+- **Entering and leaving an every other day farm**. For each farm $i$, ensure that this farm is connected to two other farms. 
+
+\begin{equation}
+\sum_{j: (i,j) \in \text{Edges}} x_{i,j,k}  = 2 \cdot y_{i, k} \quad \forall  i \in otherDay, \; k \in dayType 
+\tag{3}
+\end{equation}
+
+- **Tanker capacity**. The tanker has limited capacity.
+\begin{equation}
+\sum_{i \in \text{otherDay}} R_{i} \cdot y_{i,k} \leq C -\sum_{i \in everyDay} R_{i} \quad \forall  k \in K 
+\tag{4}
+\end{equation}
+
+- **Farms visited**. Limit on visiting some farms only every other day.
+
+\begin{equation}
+y_{i,1} + y_{i,2}  = 1 \quad \forall  i \in \text{otherDay}
+\tag{5}
+\end{equation}
+
+- **Subtour elimination**. These constraints ensure that for each route there is no cycle. 
+
+\begin{equation}
+\sum_{(i,j) \in S_k}x_{i,j,k} \leq |S_k|-1 \quad \forall  k \in K, \;   S_k \in S
+\tag{6}
+\end{equation}
+
+Where the subset $S$ is the set of farms visited by the tour, and this tour is defined by the values of the decision variables in the LHS of the inequality.

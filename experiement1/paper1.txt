@@ -1,0 +1,120 @@
+**Dynamic Multi-Tour Order-Picking Formulation**
+Problem Context
+The study addresses dynamic multi-tour order picking in automotive-part warehouses where:
+
+- Orders arrive dynamically with uncertain part requirements
+- Single tours are insufficient due to:
+    - Cart capacity limits (weight constraints)
+    - Operator workload limits (physical exertion thresholds)
+- Parts are distributed across warehouse shelves with variable locations
+- Total order-picking time (OPT) must be minimized while ensuring:
+    - Complete order fulfillment
+    - Safe operator workload per tour
+
+Key Concepts by Section
+
+1. Introduction Keywords
+
+- Dynamic order picking: Real-time adaptation to changing order requirements and part locations during picking operations.
+- Multi-tour requirement: Necessity to split orders into multiple picking cycles due to cart/operator constraints.
+- Cart capacity (\Lambda): Maximum weight a cart can carry per tour (e.g., 50kg).
+- Operator workload (\Gamma): Energy expenditure limit per tour, calculated using rolling resistance (\mu_r), part weights (u_k), and travel distance.
+
+2. Related Work Keywords
+
+- Mathematical methods: Mixed-integer programming models for optimal routing, limited by computational speed in dynamic environments.
+- Heuristic rules: Rule-based approaches (e.g., nearest-neighbor) with fast execution but suboptimal solutions.
+- Evolutionary algorithms (EAs): Population-based optimizers (e.g., genetic algorithms) providing near-optimal solutions with slow convergence.
+- DRL-based methods: Reinforcement learning approaches adapting to dynamic environments but requiring improved generalization.
+
+3.1. System description
+
+As indicated by Fig. 1, multi-tour order picking describes an abstract model where an operator gathers automotive parts from shelves according to the order requirement in a warehouse’s corridor. Suppose n shelf locations store multiple types of automotive parts in a corridor. The i-th location (i ∈ {1, 2, ..., n}) is described by four properties {L_ci, T_pi, W_ti, N_mi}, specifying the location coordinates, the part type, the part weight, and the part quantity at this location, respectively. The transfer point represents a location where the operator starts the picking task and unloads the parts from the cart. The transfer point can also be regarded as the start and the end of a tour. One tour includes leaving from the transfer point, picking up parts from shelves, and returning to the transfer point. The cart has to be emptied when its current weight exceeds the maximum weight threshold, or the operator’s workload of this tour reaches the maximum limitation. Therefore, one order-picking task may contain multiple tours among the transfer point and shelf locations. An order-picking task is completed when all parts required by the order have been picked and delivered to the transfer point, considering the constraints of cart weight and operator’s workload.
+
+3.1.1. Constraints of cart weight and operator’s workload
+
+In each tour, the cart must be emptied at the transfer point when (1) the current cart weight reaches the maximum threshold or (2) the operator’s workload exceeds the maximum limitation. Suppose the sequential set of picked parts in the cart is noted as S. For each picked part p, W_tp and L_cp specify the part weight and its corresponding location, respectively. Let Λ and Γ be the thresholds for the maximum weight and the maximum workload, respectively. Then, the constraints for each tour are described as:
+
+(1) sum_{p in S} W_tp ≤ Λ
+
+(2) sum_{p in S} μ_r * ||L_cp - L_cp_prev||_2 * W_tp * g ≤ Γ
+
+where L_cp represents the location of the next part p, μ_r represents the rolling workload coefficient, and g denotes the gravity acceleration coefficient. Eq. (2) also means that the energy consumption of one tour should not exceed a certain threshold.
+
+3.1.2. Time consumption in one tour
+
+The optimization objective of the order-picking problem is to minimize the order-picking time (OPT), which mainly contains the time consumption of several tours. The a-th tour includes four categories of time consumption, namely the visiting time T_v^(a), the picking time T_p^(a), the loading time T_l^(a), and the unloading time T_u^(a). Suppose the a-th tour needs to pick m parts, and p represents one part. The visiting time T_v^(a) is defined as:
+
+T_v^(a) = sum_{i=1}^{m} (||L_cp_i - L_cp_{i-1}||_2) / v
+
+where v denotes the cart’s average moving speed.
+
+The picking time T_p^(a) represents the time consumption of taking the part off the shelf, as defined by:
+
+T_p^(a) = sum_{i=1}^{m} [I_crane * (t_crane * W_tp_i + t_crane_start) + (1 - I_crane) * t_operator * W_tp_i]
+
+where I_crane represents the crane function to indicate whether to utilize the crane to assist the picking (I_crane = 1 represents utilizing the crane; otherwise 0), t_crane denotes the picking time of the crane per unit weight, t_crane_start means the startup time of the crane, t_operator denotes the picking time of the operator per unit weight.
+
+The loading time T_l^(a) is the time consumption of loading the picked parts into the cart, as defined by:
+
+T_l^(a) = m * t_load
+
+where t_load denotes the average loading time for an automotive part.
+
+The unloading time T_u^(a) refers to the time consumption of unloading the parts in the cart at the transferring point, as defined by:
+
+T_u^(a) = m * t_unload
+
+where t_unload represents the unit unloading time for each part.
+
+3.1.3. Dynamics analysis and assumptions
+
+In the studied problem, the dynamics mainly reflect in three aspects:
+(1) The order requirement. The required part types and part quantities may change dynamically. For example, according to a survey of Swedish automotive-part warehouses, an order may contain 45 to 75 automotive parts and 10 to 15 part types.
+(2) The part distribution (also known as the part placement). The part distributions in different corridors indicate differences. For example, the part types, quantities, and locations can be distinguishable in different corridors.
+(3) The threshold values. The maximum cart weight Λ and the maximum workload Γ may be diverse in different corridors. Practical factors such as operator strengths & genders, cart differences, and warehouse requirements influence their values.
+
+Due to the complicated production environment, the algorithm is expected to handle these dynamics effectively and provide solutions within a fast response time. For simplicity but without losing generality, we make the following assumptions:
+(1) For one order-picking task, the types and quantities of parts stored on shelves are adequate compared to the required parts of an order.
+(2) The replenishment of parts on the shelves only occurs after an order-picking task is completed.
+(3) The maximum capacity of the cart is proportional to the maximum weight of the cart. The cart cannot carry more automotive parts if the current weight of the cart has reached the maximum threshold.
+(4) The maximum weight of a part cannot exceed the maximum cart weight threshold, and the workload of delivering one part from a shelf to the transfer point cannot exceed the maximum workload constraint.
+(5) The number of parts at one shelf location is usually more than one.
+
+
+### Objective Function
+objective = r'''
+\min F(X, Y, Z, O_a) = \sum_{a} \left( T_v^{(a)} + T_p^{(a)} + T_l^{(a)} + T_u^{(a)} \right)
+Simplified: 
+\min \sum_{a,i,j} \|L_i - L_j\|_2 \cdot x_{i,j,a}'''
+
+
+### Decision Variables
+variables = r'''
+- \(x_{i,j,a} \in \{0,1\}\): Route \(i \to j\) in tour \(a\)
+- \(y_{k,i,a} \in \{0,1\}\): Part \(k\) picked at location \(i\) in tour \(a\)
+- \(z \in \mathbb{Z}^+\): Number of tours
+- \(O_a\): Set of required parts in tour \(a\)'''
+
+
+### Constraints
+constraints = r'''
+1. Tour fulfillment:
+   \(\sum |O_a| = |O|\)
+
+2. Cart weight limit:
+   \(\sum_{k,i} u_k \cdot y_{k,i,a} \leq \Lambda \quad \forall a\)
+
+3. Workload limit:
+   \(\sum_{i,j,k} \mu_r \cdot \|L_i - L_j\|_2 \cdot x_{i,j,a} \cdot u_k \cdot g \cdot y_{k,i,a} \leq \Gamma \quad \forall a\)
+
+4. Route constraints:
+   \(\sum_i x_{i,j,a} = 1 \quad \forall j, a\)
+    \(\sum_j x_{i,j,a} = 1 \quad \forall i, a\)
+   \(x_{i,j,a} + x_{j,i,a} \leq 1 \quad \forall i,j,a\)
+
+5. Part consistency:
+   \(\sum_{k,i} y_{k,i,a} = |O_a| \quad \forall a\)
+
+6. Location logic:
+   \(\sum_{i,j} x_{i,j,a} \leq \sum_{k,i} y_{k,i,a} \quad \forall a\)'''
